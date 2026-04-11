@@ -1,14 +1,25 @@
 const { app, BrowserWindow, ipcMain, Notification, Tray, nativeImage, Menu } = require('electron');
+
 require('./squirrel-startup');
-const Logger = require('./logger');
+
+const path = require('node:path');
+const crypto = require('node:crypto');
+
+const log = require('electron-log');
+const chrono = require('chrono-node');
+const { updateElectronApp, UpdateSourceType } = require('update-electron-app');
+
 const { loadTasks, saveTasks } = require('./tasks');
 const { loadConfig } = require('./config');
-const { updateElectronApp } = require('update-electron-app');
-const path = require('node:path');
-const chrono = require('chrono-node');
-const crypto = require('crypto');
+const i18n = require('./i18n');
 
-updateElectronApp();
+updateElectronApp({
+    updateSource: {
+        type: UpdateSourceType.ElectronPublicUpdateService,
+        repo: 'clausouto/pingr',
+    },
+    logger: log,
+});
 
 const ICON = nativeImage.createFromPath(path.resolve(__dirname, '..', '..', 'resources', 'icon.png'));
 const TRAY_ICON = nativeImage.createFromPath(process.platform === 'darwin' ? path.resolve(__dirname, '..', '..', 'resources', 'tray-icon-apple.png') : path.resolve(__dirname, '..', '..', 'resources', 'tray-icon.png'));
@@ -19,7 +30,7 @@ let mainWindow = null;
 let tray = null;
 
 process.on('uncaughtException', (error) => {
-    Logger.error('Uncaught Exception', error);
+    log.error('Uncaught Exception', error);
     if (!app.isPackaged) {
         process.exit(1);
     }
@@ -32,7 +43,7 @@ function sourceFile() {
 function calculateTime(content) {
     if (!content) return;
     try {
-        const timeInfo = chrono.fr.parse(content);
+        const timeInfo = chrono[i18n.getLocale()].parse(content);
         if (timeInfo.length === 0) return {
             text: null,
             timestamp: null
@@ -42,7 +53,7 @@ function calculateTime(content) {
             timestamp: timeInfo[0].start.date().getTime(),
         }
     } catch (error) {
-        Logger.error('Error parsing date', error);
+        log.error('Error parsing date', error);
     }
 }
 
@@ -120,6 +131,10 @@ const createWindow = () => {
         height: 600,
         icon: ICON,
         webPreferences: {
+            nodeIntegration: false,
+            nodeIntegrationInWorker: false,
+            nodeIntegrationInSubFrames: false,
+            contextIsolation: true,
             preload: path.resolve(__dirname, '..', 'preload', 'app.js')
         }
     })
@@ -130,8 +145,29 @@ const createWindow = () => {
 }
 
 app.whenReady().then(() => {
+    let config = loadConfig();
+
+    if (i18n.getLocales().includes(config.language)) {
+        i18n.setLocale(config.language);
+    }
+
     require('./menu');
-    loadConfig();
+
+    ipcMain.handle('get-translation', (event, key, ...args) => {
+        return i18n.__(key, ...args);
+    });
+
+    ipcMain.handle('get-locale', () => {
+        return i18n.getLocale();
+    });
+
+    ipcMain.handle('set-locale', (event, locale) => {
+        if (i18n.getLocales().includes(locale)) {
+            i18n.setLocale(locale);
+            return true;
+        }
+        return false;
+    });
 
     ipcMain.handle('add-task', (event, task) => {
         const tasks = loadTasks();
@@ -150,10 +186,10 @@ app.whenReady().then(() => {
         tasks.push(newTask);
 
         if (saveTasks(tasks)) {
-            Logger.info(`Task saved successfully`);
+            log.debug('Task saved successfully');
             return { success: true, task: newTask };
         } else {
-            Logger.error('Failed to save task');
+            log.error('Failed to save task');
             return { success: false, error: 'Failed to save task' };
         }
     });
@@ -234,7 +270,7 @@ app.whenReady().then(() => {
         tray = new Tray(TRAY_ICON);
         const menu = Menu.buildFromTemplate([
             {
-                label: "Open Pingr window", click: (item, window, event) => {
+                label: i18n.__('tray.open'), click: (item, window, event) => {
                     if (mainWindow) {
                         mainWindow.show();
                         mainWindow.focus();
@@ -261,7 +297,6 @@ app.whenReady().then(() => {
     }
 
     app.on("before-quit", ev => {
-        console.log('App is quitting, cleaning up...');
         stopNotificationTimer();
 
         if (mainWindow) {

@@ -1,11 +1,18 @@
 const { contextBridge, ipcRenderer } = require('electron/renderer');
 
+contextBridge.exposeInMainWorld('translationAPI', {
+    getTranslation: (key, ...args) => ipcRenderer.invoke('get-translation', key, ...args),
+    getLocale: () => ipcRenderer.invoke('get-locale'),
+    setLocale: (locale) => ipcRenderer.invoke('set-locale', locale)
+});
+
 contextBridge.exposeInMainWorld('remindersAPI', {
+    onLocaleChanged: (callback) => ipcRenderer.on('locale-changed', (event, locale) => callback(locale)),
     addTask: (task) => ipcRenderer.invoke('add-task', task),
     getTasks: () => ipcRenderer.invoke('get-tasks'),
     getTask: (id) => ipcRenderer.invoke('get-task', id),
     deleteTask: (id) => ipcRenderer.invoke('delete-task', id),
     completeTask: (id) => ipcRenderer.invoke('complete-task', id),
     editTask: (id, newContent) => ipcRenderer.invoke('edit-task', id, newContent),
-    onTasksUpdated: (callback) => ipcRenderer.on('tasks-updated', callback)
+    onTasksUpdated: (callback) => ipcRenderer.on('tasks-updated', callback),
 });

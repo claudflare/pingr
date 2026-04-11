@@ -3,6 +3,50 @@ let historyListElement = document.getElementById("historyList");
 let historyContentElement = document.getElementById("historyContent");
 let showHistoryCheckbox = document.getElementById("showHistory");
 
+let translations = {};
+let currentLocale = 'en';
+
+async function loadTranslations() {
+    const keys = [
+        'ui.noActiveTasks',
+        'ui.noCompletedTasks',
+        'ui.completed',
+        'ui.reminder',
+        'ui.today',
+        'ui.tomorrow',
+        'ui.inputPlaceholder',
+        'ui.reminderPlaceholder',
+        'ui.activeTasks',
+        'ui.showHistory',
+        'ui.completedTasks'
+    ];
+
+    for (const key of keys) {
+        translations[key] = await window.translationAPI.getTranslation(key);
+    }
+}
+
+async function translatePage() {
+    const elements = document.querySelectorAll('[data-i18n]');
+    
+    for (const element of elements) {
+        const key = element.getAttribute('data-i18n');
+        const translation = await window.translationAPI.getTranslation(key);
+        element.textContent = translation;
+    }
+
+    const placeholderElements = document.querySelectorAll('[data-i18n-placeholder]');
+    for (const element of placeholderElements) {
+        const key = element.getAttribute('data-i18n-placeholder');
+        const translation = await window.translationAPI.getTranslation(key);
+        element.setAttribute('placeholder', translation);
+    }
+}
+
+function t(key) {
+    return translations[key] || key;
+}
+
 async function getTask(taskId) {
     return await window.remindersAPI.getTask(taskId);
 }
@@ -30,7 +74,6 @@ async function editTask(taskId, newContent) {
 
 function makeTaskEditable(taskElement, task) {
     if (taskElement.classList.contains('task-editing')) {
-        console.log("discarding editing.")
         return;
     }
 
@@ -89,7 +132,6 @@ function makeTaskEditable(taskElement, task) {
 
     // cancel if clicked outside (with small delay to prevent immediate cancellation)
     setTimeout(() => {
-        console.log("click outside check")
         handleClickOutside = (e) => {
             if (!taskElement.contains(e.target)) {
                 document.removeEventListener('click', handleClickOutside);
@@ -107,7 +149,7 @@ async function displayTasks() {
     const activeTasks = tasks.filter(task => !task.completed);
 
     if (activeTasks.length === 0) {
-        listElement.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-check-circle me-2"></i>Aucune tâche en cours</div>';
+        listElement.innerHTML = `<div class="text-center text-muted py-4"><i class="bi bi-check-circle me-2"></i>${t('ui.noActiveTasks')}</div>`;
         return;
     }
 
@@ -138,24 +180,26 @@ async function displayTasks() {
 
             let dateText;
             if (isOverdue) {
-                dateText = `📌 Rappel - ${date.toLocaleDateString('fr-FR', {
+                dateText = `📌 ${t('ui.reminder')} - ${date.toLocaleDateString(currentLocale, {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',
                     hour: '2-digit',
-                    minute: '2-digit'
+                    minute: '2-digit',
+                    year: 'numeric'
                 })}`;
             } else if (isToday) {
-                dateText = `Aujourd'hui ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+                dateText = `${t('ui.today')} ${date.toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' })}`;
             } else if (isTomorrow) {
-                dateText = `Demain ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+                dateText = `${t('ui.tomorrow')} ${date.toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' })}`;
             } else {
-                dateText = date.toLocaleDateString('fr-FR', {
+                dateText = date.toLocaleDateString(currentLocale, {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',
                     hour: '2-digit',
-                    minute: '2-digit'
+                    minute: '2-digit',
+                    year: 'numeric'
                 });
             }
 
@@ -168,11 +212,11 @@ async function displayTasks() {
                 ${timeDisplay}
             </div>
 
-            <button class="task-complete" data-task-id="${task.id}" title="Marquer comme terminé">
+            <button class="task-complete" data-task-id="${task.id}">
                 <i class="bi bi-check-lg"></i>
             </button>
 
-            <button class="task-delete" data-task-id="${task.id}" title="Supprimer">
+            <button class="task-delete" data-task-id="${task.id}">
                 <i class="bi bi-x-lg"></i>
             </button>
         `;
@@ -207,7 +251,7 @@ async function displayHistory() {
     const completedTasks = tasks.filter(task => task.completed);
 
     if (completedTasks.length === 0) {
-        historyContentElement.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-check-circle me-2"></i>Aucune tâche terminée</div>';
+        historyContentElement.innerHTML = `<div class="text-center text-muted py-4"><i class="bi bi-check-circle me-2"></i>${t('ui.noCompletedTasks')}</div>`;
         return;
     }
 
@@ -218,10 +262,10 @@ async function displayHistory() {
         taskElement.innerHTML = `
             <div class="task-content">
                 <div class="task-text">${task.content}</div>
-                <div class="task-date"><i class="bi bi-check-circle-fill me-1"></i>Terminé</div>
+                <div class="task-date"><i class="bi bi-check-circle-fill me-1"></i>${t('ui.completed')}</div>
             </div>
 
-            <button class="task-delete" data-task-id="${task.id}" title="Supprimer définitivement">
+            <button class="task-delete" data-task-id="${task.id}">
                 <i class="bi bi-trash3"></i>
             </button>
         `;
@@ -265,10 +309,21 @@ if (showHistoryCheckbox) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    currentLocale = await window.translationAPI.getLocale();
+    await loadTranslations();
+    await translatePage();
+
     refreshDisplay();
 
     window.remindersAPI.onTasksUpdated(() => {
+        refreshDisplay();
+    });
+
+    window.remindersAPI.onLocaleChanged(async (locale) => {
+        currentLocale = locale;
+        await loadTranslations();
+        await translatePage();
         refreshDisplay();
     });
 });

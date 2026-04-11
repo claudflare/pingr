@@ -1,7 +1,7 @@
 {
   "name": "pingr",
   "productName": "Pingr",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "app de gestion de rappels",
   "main": "src/main/index.js",
   "scripts": {
@@ -14,24 +14,26 @@
   "author": "Claudio Souto",
   "license": "MIT",
   "devDependencies": {
-    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/cli": "^7.6.1",
     "@electron-forge/maker-deb": "^7.11.1",
     "@electron-forge/maker-dmg": "^7.11.1",
     "@electron-forge/maker-rpm": "^7.11.1",
     "@electron-forge/maker-squirrel": "^7.11.1",
     "@electron-forge/maker-zip": "^7.9.0",
     "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
-    "@electron-forge/plugin-fuses": "^7.10.2",
+    "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron-forge/publisher-github": "^7.9.0",
-    "@electron/fuses": "^2.0.0",
-    "electron": "^38.4.0"
+    "@electron/fuses": "^1.8.0",
+    "electron": "^41.2.0"
   },
   "dependencies": {
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "chrono-node": "^2.9.0",
+    "electron-log": "^5.4.3",
     "electron-squirrel-startup": "^1.0.1",
-    "update-electron-app": "^3.1.2"
+    "i18n": "^0.15.2",
+    "update-electron-app": "^3.1.1"
   },
   "repository": {
     "type": "git",
