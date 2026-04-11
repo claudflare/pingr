@@ -131,6 +131,10 @@ const createWindow = () => {
         height: 600,
         icon: ICON,
         webPreferences: {
+            nodeIntegration: false,
+            nodeIntegrationInWorker: false,
+            nodeIntegrationInSubFrames: false,
+            contextIsolation: true,
             preload: path.resolve(__dirname, '..', 'preload', 'app.js')
         }
     })
