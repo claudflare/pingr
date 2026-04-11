@@ -4,6 +4,7 @@ let historyContentElement = document.getElementById("historyContent");
 let showHistoryCheckbox = document.getElementById("showHistory");
 
 let translations = {};
+let currentLocale = 'en';
 
 async function loadTranslations() {
     const keys = [
@@ -179,7 +180,7 @@ async function displayTasks() {
 
             let dateText;
             if (isOverdue) {
-                dateText = `📌 ${t('ui.reminder')} - ${date.toLocaleDateString('fr-FR', {
+                dateText = `📌 ${t('ui.reminder')} - ${date.toLocaleDateString(currentLocale, {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',
@@ -188,11 +189,11 @@ async function displayTasks() {
                     year: 'numeric'
                 })}`;
             } else if (isToday) {
-                dateText = `${t('ui.today')} ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+                dateText = `${t('ui.today')} ${date.toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' })}`;
             } else if (isTomorrow) {
-                dateText = `${t('ui.tomorrow')} ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+                dateText = `${t('ui.tomorrow')} ${date.toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' })}`;
             } else {
-                dateText = date.toLocaleDateString('fr-FR', {
+                dateText = date.toLocaleDateString(currentLocale, {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',
@@ -309,6 +310,7 @@ if (showHistoryCheckbox) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    currentLocale = await window.translationAPI.getLocale();
     await loadTranslations();
     await translatePage();
 
@@ -318,7 +320,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         refreshDisplay();
     });
 
-    window.remindersAPI.onLocaleChanged(async () => {
+    window.remindersAPI.onLocaleChanged(async (locale) => {
+        currentLocale = locale;
         await loadTranslations();
         await translatePage();
         refreshDisplay();
