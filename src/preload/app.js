@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('translationAPI', {
 });
 
 contextBridge.exposeInMainWorld('remindersAPI', {
+    onLocaleChanged: (callback) => ipcRenderer.on('locale-changed', (event, locale) => callback(locale)),
     addTask: (task) => ipcRenderer.invoke('add-task', task),
     getTasks: () => ipcRenderer.invoke('get-tasks'),
     getTask: (id) => ipcRenderer.invoke('get-task', id),

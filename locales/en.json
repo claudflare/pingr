@@ -7,7 +7,8 @@
 		"autoLaunch": "Launch at startup",
 		"encryptData": "Encrypt data (experimental)",
 		"exportTasks": "Export tasks (unencrypted)",
-		"resetTasks": "Reset tasks"
+		"resetTasks": "Reset tasks",
+		"language": "Language"
 	},
 	"ui": {
 		"noActiveTasks": "No active tasks",

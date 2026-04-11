@@ -317,4 +317,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.remindersAPI.onTasksUpdated(() => {
         refreshDisplay();
     });
+
+    window.remindersAPI.onLocaleChanged(async () => {
+        await loadTranslations();
+        await translatePage();
+        refreshDisplay();
+    });
 });
