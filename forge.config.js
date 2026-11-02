@@ -9,9 +9,7 @@ module.exports = {
       identity: process.env.SIGN_ID
     },
     osxNotarize: {
-      appleId: process.env.APPLE_ID,
-      appleIdPassword: process.env.APPLE_PASSWORD,
-      teamId: process.env.APPLE_TEAM_ID
+      keychainProfile: 'pingr-notary'
     }
   },
   rebuildConfig: {},
@@ -59,6 +57,7 @@ module.exports = {
           name: 'pingr',
         },
         prerelease: false,
+        draft: true,
         authToken: process.env.GITHUB_TOKEN,
       }
     }
