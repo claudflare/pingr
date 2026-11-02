@@ -24,7 +24,11 @@ updateElectronApp({
 const ICON = nativeImage.createFromPath(path.resolve(__dirname, '..', '..', 'resources', 'icon.png'));
 const TRAY_ICON = nativeImage.createFromPath(process.platform === 'darwin' ? path.resolve(__dirname, '..', '..', 'resources', 'tray-icon-apple.png') : path.resolve(__dirname, '..', '..', 'resources', 'tray-icon.png'));
 
+const NOTIFICATION_RETRY_MS = 60 * 1000;
+
 let notificationTimer = null;
+const activeNotifications = new Set();
+const notificationRetryAt = new Map();
 
 let mainWindow = null;
 let tray = null;
@@ -57,6 +61,37 @@ function calculateTime(content) {
     }
 }
 
+function showTaskNotification(task) {
+    const notification = new Notification({
+        title: 'Pingr',
+        body: task.content,
+    });
+
+    // Hold a reference so the events still fire if the object would otherwise be garbage collected.
+    activeNotifications.add(notification);
+
+    notification.once('show', () => {
+        activeNotifications.delete(notification);
+        notificationRetryAt.delete(task.id);
+    });
+
+    // macOS reports this when the app isn't code-signed or notifications aren't allowed.
+    notification.once('failed', (event, error) => {
+        activeNotifications.delete(notification);
+        log.error(`Notification failed for task ${task.id}, retrying in ${NOTIFICATION_RETRY_MS / 1000}s:`, error);
+        notificationRetryAt.set(task.id, Date.now() + NOTIFICATION_RETRY_MS);
+
+        const tasks = loadTasks();
+        const failedTask = tasks.find((t) => t.id === task.id);
+        if (failedTask && !failedTask.completed) {
+            failedTask.notified = false;
+            saveTasks(tasks);
+        }
+    });
+
+    notification.show();
+}
+
 function checkForNotifications() {
     const tasks = loadTasks();
     const now = Date.now();
@@ -68,14 +103,13 @@ function checkForNotifications() {
         if (task.timestamp === null) continue;
 
         if (!task.completed && !task.notified && task.timestamp <= now) {
-            const notification = new Notification({
-                title: 'Pingr',
-                body: task.content,
-            });
+            if (notificationRetryAt.get(task.id) > now) continue;
 
-            notification.show();
+            const isRetry = notificationRetryAt.has(task.id);
 
-            if (mainWindow && !mainWindow.isDestroyed()) {
+            showTaskNotification(task);
+
+            if (!isRetry && mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.once('focus', () => mainWindow.flashFrame(false));
                 mainWindow.flashFrame(true);
             }
